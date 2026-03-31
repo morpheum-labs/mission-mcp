@@ -80,6 +80,8 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
+Includes ingest validation, **`MissionPlanner`** with mocked `embed_query` and **`ChromaStore.query`**, and pure **`_rank_and_dedupe`** behavior.
+
 ## CLI entry points
 
 | Command | Purpose |
