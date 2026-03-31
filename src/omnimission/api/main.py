@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import time
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastmcp.utilities.lifespan import combine_lifespans
+from prometheus_client import make_asgi_app
 
 from omnimission.api.schemas import HealthResponse
 from omnimission.chroma_store import ChromaStore
 from omnimission.config import get_settings
 from omnimission.embeddings import embed_query
 from omnimission.mcp_server import build_mcp
+from omnimission.monitoring import (
+    HTTP_REQUEST_DURATION_SECONDS,
+    HTTP_REQUESTS_TOTAL,
+    route_group,
+)
 from omnimission.planner.service import MissionPlanner
 from omnimission.x402_ask import build_x402_mcp_middleware
 
@@ -20,6 +27,7 @@ API_DESCRIPTION = """
 
 - **OpenAPI** (this spec): `/openapi.json`, interactive docs: `/docs`, ReDoc: `/redoc`
 - **MCP (HTTP)**: mounted at `/mcp` — use an MCP client with streamable HTTP/SSE against that path. Primary tool: `plan_mission` (natural-language mission → ranked skills, scores, x402 preview, install hints).
+- **Prometheus**: `GET /metrics` — scrape for HTTP, `plan_mission`, and Chroma query counters (and crawler when that process runs).
 - **x402 ask (optional)**: set `OMNIMISSION_X402_ASK_ENABLED=true` to require [x402](https://www.x402.org/) payment (HTTP 402) on `/mcp` before MCP access; configure facilitator URL, network, `pay_to`, and price via env.
 
 The MCP protocol is defined by the [Model Context Protocol](https://modelcontextprotocol.io/); this document describes the FastAPI routes only (the MCP sub-app is documented below as an extension path).
@@ -117,6 +125,20 @@ def create_app() -> FastAPI:
         expose_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def prometheus_http_metrics(request: Request, call_next):
+        path = request.url.path
+        if path.startswith("/metrics"):
+            return await call_next(request)
+        method = request.method
+        rg = route_group(path)
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed = time.perf_counter() - start
+        HTTP_REQUESTS_TOTAL.labels(method=method, route_group=rg).inc()
+        HTTP_REQUEST_DURATION_SECONDS.labels(route_group=rg).observe(elapsed)
+        return response
+
     @app.get(
         "/",
         tags=["meta"],
@@ -131,6 +153,7 @@ def create_app() -> FastAPI:
             "redoc": "/redoc",
             "openapi": "/openapi.json",
             "mcp": "/mcp",
+            "metrics": "/metrics",
             "x402_ask_enabled": settings.x402_ask_enabled,
         }
 
@@ -145,6 +168,7 @@ def create_app() -> FastAPI:
         return HealthResponse(status="ok", service="omnimission-api")
 
     app.mount("/mcp", mcp_app)
+    app.mount("/metrics", make_asgi_app())
     return app
 
 

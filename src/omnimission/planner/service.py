@@ -9,6 +9,7 @@ from langgraph.graph import END, StateGraph
 from omnimission.chroma_store import ChromaStore
 from omnimission.config import Settings
 from omnimission.embeddings import embed_query
+from omnimission.monitoring import observe_chroma_query
 from omnimission.planner.graph import PlannerState
 from omnimission.x402_preview import grand_total_preview
 
@@ -105,6 +106,7 @@ class MissionPlanner:
                 query_embedding=emb,
                 n_results=self._settings.fetch_n,
             )
+            observe_chroma_query()
             ranked = _rank_and_dedupe(
                 ids,
                 metas,

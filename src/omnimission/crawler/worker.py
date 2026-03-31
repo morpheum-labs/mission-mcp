@@ -10,6 +10,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from omnimission.chroma_store import ChromaStore
 from omnimission.config import get_settings
 from omnimission.ingest import chunk_markdown_skill_like, ingest_records
+from omnimission.monitoring import record_crawler_run
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("omnimission.crawler")
@@ -65,6 +66,7 @@ def _run_loop() -> None:
     def job() -> None:
         n = asyncio.run(crawl_and_ingest_once())
         log.info("crawl cycle finished, total chunks upserted: %s", n)
+        record_crawler_run()
 
     job()
     sched = BlockingScheduler()

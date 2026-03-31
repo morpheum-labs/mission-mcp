@@ -19,7 +19,10 @@ Register the tool **`plan_mission`** with a single string argument **`mission`**
 ```bash
 curl -s http://localhost:8080/health
 curl -s http://localhost:8080/ | jq .
+curl -s http://localhost:8080/metrics | head
 ```
+
+Prometheus scrape target: **`GET /metrics`** (`omnimission_*` series: HTTP latency/counts, `plan_mission` outcomes/durations, Chroma query count; the crawler process exposes `omnimission_crawler_runs_total` when the worker runs).
 
 MCP sessions are negotiated by the client (not a single static `curl` one-liner). For local debugging, use an MCP-aware IDE or the official MCP Inspector once configured for your base URL.
 
