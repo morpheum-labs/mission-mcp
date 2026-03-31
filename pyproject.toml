@@ -18,7 +18,7 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "spider_rs>=0.0.50",
     "uvicorn[standard]>=0.32.0",
-    "x402>=2.0.0",
+    "x402[evm,fastapi]>=2.0.0",
 ]
 
 [project.optional-dependencies]

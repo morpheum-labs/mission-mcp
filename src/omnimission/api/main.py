@@ -13,12 +13,14 @@ from omnimission.config import get_settings
 from omnimission.embeddings import embed_query
 from omnimission.mcp_server import build_mcp
 from omnimission.planner.service import MissionPlanner
+from omnimission.x402_ask import build_x402_mcp_middleware
 
 API_DESCRIPTION = """
 **OmniMission** exposes a REST surface for health checks and mounts a **FastMCP** server for agents.
 
 - **OpenAPI** (this spec): `/openapi.json`, interactive docs: `/docs`, ReDoc: `/redoc`
 - **MCP (HTTP)**: mounted at `/mcp` — use an MCP client with streamable HTTP/SSE against that path. Primary tool: `plan_mission` (natural-language mission → ranked skills, scores, x402 preview, install hints).
+- **x402 ask (optional)**: set `OMNIMISSION_X402_ASK_ENABLED=true` to require [x402](https://www.x402.org/) payment (HTTP 402) on `/mcp` before MCP access; configure facilitator URL, network, `pay_to`, and price via env.
 
 The MCP protocol is defined by the [Model Context Protocol](https://modelcontextprotocol.io/); this document describes the FastAPI routes only (the MCP sub-app is documented below as an extension path).
 """
@@ -102,11 +104,17 @@ def create_app() -> FastAPI:
         return app.openapi_schema
 
     app.openapi = custom_openapi  # type: ignore[method-assign]
+
+    x402_mw = build_x402_mcp_middleware(settings)
+    if x402_mw is not None:
+        app.middleware("http")(x402_mw)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
 
     @app.get(
@@ -123,6 +131,7 @@ def create_app() -> FastAPI:
             "redoc": "/redoc",
             "openapi": "/openapi.json",
             "mcp": "/mcp",
+            "x402_ask_enabled": settings.x402_ask_enabled,
         }
 
     @app.get(

@@ -140,4 +140,11 @@ class MissionPlanner:
             "skills": out.get("ranked_skills") or [],
             "x402_preview": out.get("x402_preview") or {},
             "install_commands": out.get("install_commands") or [],
+            "x402_ask": {
+                "enabled": self._settings.x402_ask_enabled,
+                "note": (
+                    "When enabled, MCP HTTP access to this server requires x402 payment "
+                    "before tools run; see PAYMENT-REQUIRED / 402 on /mcp."
+                ),
+            },
         }
