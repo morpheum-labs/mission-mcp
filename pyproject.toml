@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omnimission-mcp"
+version = "0.1.0"
+description = "OmniMission MCP — mission planner over skills/MCP index (Chroma + LangGraph + FastMCP)"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.26,<2",
+    "apscheduler>=3.10.0",
+    "chromadb>=0.5.0",
+    "fastapi>=0.115.0",
+    "fastembed>=0.4.0",
+    "fastmcp>=3.0.0",
+    "langgraph>=0.2.0",
+    "pydantic-settings>=2.0.0",
+    "spider_rs>=0.0.50",
+    "uvicorn[standard]>=0.32.0",
+    "x402>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.8.0"]
+
+[project.scripts]
+omnimission-api = "omnimission.api.main:run"
+omnimission-crawler = "omnimission.crawler.worker:main"
+omnimission-export-openapi = "omnimission.export_openapi:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

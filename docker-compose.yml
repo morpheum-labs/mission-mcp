@@ -1,0 +1,40 @@
+services:
+  chroma-db:
+    image: chromadb/chroma:latest
+    environment:
+      ANONYMIZED_TELEMETRY: "false"
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "8000:8000"
+
+  api-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: ["bash", "-lc", "uvicorn omnimission.api.main:app --host 0.0.0.0 --port 8080"]
+    environment:
+      OMNIMISSION_CHROMA_HOST: chroma-db
+      OMNIMISSION_CHROMA_PORT: "8000"
+      OMNIMISSION_EMBED_MODEL: sentence-transformers/all-MiniLM-L6-v2
+    ports:
+      - "8080:8080"
+    depends_on:
+      - chroma-db
+
+  crawler-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: ["bash", "-lc", "python -m omnimission.crawler.worker"]
+    environment:
+      OMNIMISSION_CHROMA_HOST: chroma-db
+      OMNIMISSION_CHROMA_PORT: "8000"
+      OMNIMISSION_EMBED_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      OMNIMISSION_CRAWLER_INTERVAL_MINUTES: "15"
+      OMNIMISSION_CRAWLER_SEED_URLS: "https://raw.githubusercontent.com/anthropics/skills/main/README.md"
+    depends_on:
+      - chroma-db
+
+volumes:
+  chroma_data:

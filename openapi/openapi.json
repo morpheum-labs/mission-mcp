@@ -1,0 +1,114 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OmniMission API",
+    "description": "\n**OmniMission** exposes a REST surface for health checks and mounts a **FastMCP** server for agents.\n\n- **OpenAPI** (this spec): `/openapi.json`, interactive docs: `/docs`, ReDoc: `/redoc`\n- **MCP (HTTP)**: mounted at `/mcp` — use an MCP client with streamable HTTP/SSE against that path. Primary tool: `plan_mission` (natural-language mission → ranked skills, scores, x402 preview, install hints).\n\nThe MCP protocol is defined by the [Model Context Protocol](https://modelcontextprotocol.io/); this document describes the FastAPI routes only (the MCP sub-app is documented below as an extension path).\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "API root",
+        "operationId": "root",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Root"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health check",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "MCP HTTP transport (session)",
+        "description": "Entry for the FastMCP ASGI app (`http_app`). Clients use MCP streamable HTTP / SSE semantics on this path and its sub-routes. Tool: **plan_mission** — pass a mission string; response includes ranked skills and x402 preview.",
+        "operationId": "mcp_session",
+        "responses": {
+          "200": {
+            "description": "MCP protocol response (SSE or JSON-RPC per client negotiation)."
+          },
+          "405": {
+            "description": "Some methods may return 405 depending on client and sub-path."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "examples": [
+              "ok"
+            ]
+          },
+          "service": {
+            "type": "string",
+            "title": "Service",
+            "examples": [
+              "omnimission-api"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service"
+        ],
+        "title": "HealthResponse"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "meta",
+      "description": "Service metadata and discovery."
+    },
+    {
+      "name": "health",
+      "description": "Liveness and readiness probes."
+    },
+    {
+      "name": "mcp",
+      "description": "Model Context Protocol over HTTP (mounted ASGI app). Not every sub-route is listed here; use an MCP client to negotiate the session."
+    }
+  ]
+}
