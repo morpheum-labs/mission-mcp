@@ -19,10 +19,11 @@ dependencies = [
     "spider_rs>=0.0.50",
     "uvicorn[standard]>=0.32.0",
     "x402[evm,fastapi]>=2.0.0",
+    "tenacity>=8.2.0",
 ]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.8.0"]
+dev = ["ruff>=0.8.0", "pytest>=8.0.0"]
 
 [project.scripts]
 omnimission-api = "omnimission.api.main:run"

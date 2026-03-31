@@ -4,9 +4,14 @@ from functools import lru_cache
 from typing import Self
 
 from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings.sources import TomlConfigSettingsSource
 
-from x402.http.constants import DEFAULT_FACILITATOR_URL
+# Keep in sync with x402.http.constants.DEFAULT_FACILITATOR_URL (avoid importing x402 in config).
+_DEFAULT_X402_FACILITATOR_URL = "https://x402.org/facilitator"
+
+# Resolved from CWD; missing file is ignored. Env and .env override these values.
+_CONF_TOML = "conf.toml"
 
 
 class Settings(BaseSettings):
@@ -14,7 +19,26 @@ class Settings(BaseSettings):
         env_prefix="OMNIMISSION_",
         env_file=".env",
         extra="ignore",
+        toml_file=_CONF_TOML,
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        # Priority (highest first): init kwargs → OS env → .env → secrets → conf.toml → field defaults
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+            TomlConfigSettingsSource(settings_cls),
+        )
 
     chroma_host: str = "localhost"
     chroma_port: int = 8000
@@ -34,7 +58,7 @@ class Settings(BaseSettings):
         description="Enable x402 HTTP 402 payment gate on /mcp (pay per use).",
     )
     x402_facilitator_url: str = Field(
-        default=DEFAULT_FACILITATOR_URL,
+        default=_DEFAULT_X402_FACILITATOR_URL,
         description="x402 facilitator HTTP base URL.",
     )
     x402_network: str = Field(

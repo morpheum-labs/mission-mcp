@@ -5,6 +5,7 @@ import logging
 from urllib.parse import urlparse
 
 import spider_rs
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from omnimission.chroma_store import ChromaStore
 from omnimission.config import get_settings
@@ -21,6 +22,15 @@ def _host_publisher(url: str) -> str:
         return "unknown"
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+    reraise=True,
+)
+async def _crawl_with_retry(seed: str):
+    return await spider_rs.crawl(seed)
+
+
 async def crawl_and_ingest_once() -> int:
     settings = get_settings()
     store = ChromaStore(
@@ -29,11 +39,13 @@ async def crawl_and_ingest_once() -> int:
         collection_name=settings.collection_name,
     )
     total = 0
-    for seed in settings.seed_urls:
+    for i, seed in enumerate(settings.seed_urls):
+        if i:
+            await asyncio.sleep(0.5)
         try:
-            site = await spider_rs.crawl(seed)
+            site = await _crawl_with_retry(seed)
         except Exception as e:
-            log.warning("crawl failed for %s: %s", seed, e)
+            log.warning("crawl failed for %s after retries: %s", seed, e)
             continue
         publisher = _host_publisher(seed)
         for page in site.pages:

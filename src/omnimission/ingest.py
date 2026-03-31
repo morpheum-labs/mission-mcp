@@ -10,9 +10,10 @@ from omnimission.chroma_store import ChromaStore
 from omnimission.embeddings import embed_texts
 
 
-def _stable_id(publisher: str, title: str) -> str:
-    raw = f"{publisher.strip().lower()}|{title.strip().lower()}"
-    return hashlib.sha256(raw.encode()).hexdigest()[:20]
+def _chunk_id(title: str, body: str) -> str:
+    """Stable id from title + body so identical chunks dedupe across URLs/publishers."""
+    raw = f"{title.strip().lower()}\n\n{body.strip()}"
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def _parse_frontmatter(blob: str) -> tuple[dict[str, Any], str]:
@@ -97,6 +98,7 @@ def build_metadata(record: dict[str, Any]) -> dict[str, Any]:
         "x402_price_usd": x402,
         "install_commands_json": json.dumps(installs),
         "indexed_at": datetime.now(UTC).isoformat(),
+        "content_sha256": _chunk_id(str(record["title"]), str(record.get("body") or "")),
     }
 
 
@@ -114,7 +116,7 @@ def ingest_records(
     metas: list[dict[str, Any]] = []
     for i, r in enumerate(records):
         meta = build_metadata(r)
-        sid = _stable_id(meta["publisher"], meta["title"])
+        sid = _chunk_id(str(r["title"]), str(r.get("body") or ""))
         ids.append(sid)
         docs.append(texts[i])
         metas.append(meta)

@@ -1,0 +1,18 @@
+# Copy to conf.toml and adjust. Keys use the same names as Python fields (no OMNIMISSION_ prefix).
+# Precedence: process environment > .env > this file > built-in defaults.
+
+chroma_host = "localhost"
+chroma_port = 8000
+collection_name = "skills_mcp"
+embed_model = "sentence-transformers/all-MiniLM-L6-v2"
+top_k = 12
+fetch_n = 24
+crawler_interval_minutes = 15
+crawler_seed_urls = "https://example.com"
+
+x402_ask_enabled = false
+x402_facilitator_url = "https://x402.org/facilitator"
+x402_network = "eip155:84532"
+x402_pay_to = ""
+x402_price = "$0.01"
+x402_resource_description = "OmniMission MCP access (plan_mission and related tools)."
