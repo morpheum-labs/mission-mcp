@@ -50,6 +50,50 @@
         }
       }
     },
+    "/v1/plan": {
+      "post": {
+        "tags": [
+          "planning"
+        ],
+        "summary": "Plan a mission (REST)",
+        "description": "Same planner as MCP `plan_mission`: ranked skills, policy, verification, optional checkpoints.",
+        "operationId": "plan_mission_rest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanMissionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Plan Mission Rest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/mcp": {
       "get": {
         "tags": [
@@ -71,6 +115,19 @@
   },
   "components": {
     "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -94,6 +151,80 @@
           "service"
         ],
         "title": "HealthResponse"
+      },
+      "PlanMissionInput": {
+        "properties": {
+          "mission": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Mission"
+          },
+          "mission_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mission Id",
+            "description": "Optional stable id to append checkpoints in the mission_state collection."
+          },
+          "include_ranking_details": {
+            "type": "boolean",
+            "title": "Include Ranking Details",
+            "description": "Include per-skill ranking breakdown and verification hints.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "mission"
+        ],
+        "title": "PlanMissionInput",
+        "description": "Validates the `plan_mission` tool and REST body."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   },
@@ -105,6 +236,10 @@
     {
       "name": "health",
       "description": "Liveness and readiness probes."
+    },
+    {
+      "name": "planning",
+      "description": "Mission planning (same logic as MCP plan_mission)."
     },
     {
       "name": "mcp",

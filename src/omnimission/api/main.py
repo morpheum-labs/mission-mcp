@@ -9,9 +9,10 @@ from fastapi.openapi.utils import get_openapi
 from fastmcp.utilities.lifespan import combine_lifespans
 from prometheus_client import make_asgi_app
 
-from omnimission.api.schemas import HealthResponse
+from omnimission.api.schemas import HealthResponse, PlanMissionInput
 from omnimission.chroma_store import ChromaStore
 from omnimission.config import get_settings
+from omnimission.mission_state import MissionStateStore
 from omnimission.embeddings import embed_query
 from omnimission.mcp_server import build_mcp
 from omnimission.monitoring import (
@@ -26,7 +27,8 @@ API_DESCRIPTION = """
 **OmniMission** exposes a REST surface for health checks and mounts a **FastMCP** server for agents.
 
 - **OpenAPI** (this spec): `/openapi.json`, interactive docs: `/docs`, ReDoc: `/redoc`
-- **MCP (HTTP)**: mounted at `/mcp` — use an MCP client with streamable HTTP/SSE against that path. Primary tool: `plan_mission` (natural-language mission → ranked skills, scores, x402 preview, install hints).
+- **Planning (REST)**: `POST /v1/plan` — same planner as MCP `plan_mission` (ranked skills, policy summary, index verification, optional `mission_id` checkpoints).
+- **MCP (HTTP)**: mounted at `/mcp` — use an MCP client with streamable HTTP/SSE against that path. Primary tool: `plan_mission` (natural-language mission → ranked skills, scores, policy, verification, x402 preview, install hints).
 - **Prometheus**: `GET /metrics` — scrape for HTTP, `plan_mission`, and Chroma query counters (and crawler when that process runs).
 - **x402 ask (optional)**: set `OMNIMISSION_X402_ASK_ENABLED=true` to require [x402](https://www.x402.org/) payment (HTTP 402) on `/mcp` before MCP access; configure facilitator URL, network, `pay_to`, and price via env.
 
@@ -43,6 +45,10 @@ OPENAPI_TAGS = [
         "description": "Liveness and readiness probes.",
     },
     {
+        "name": "planning",
+        "description": "Mission planning (same logic as MCP plan_mission).",
+    },
+    {
         "name": "mcp",
         "description": "Model Context Protocol over HTTP (mounted ASGI app). Not every sub-route is listed here; use an MCP client to negotiate the session.",
     },
@@ -56,7 +62,17 @@ def create_app() -> FastAPI:
         port=settings.chroma_port,
         collection_name=settings.collection_name,
     )
-    planner = MissionPlanner(settings, store)
+    mission_state: MissionStateStore | None = None
+    if settings.mission_state_enabled:
+        mission_state = MissionStateStore(
+            settings,
+            ChromaStore(
+                host=settings.chroma_host,
+                port=settings.chroma_port,
+                collection_name=settings.mission_state_collection,
+            ),
+        )
+    planner = MissionPlanner(settings, store, mission_state=mission_state)
     mcp = build_mcp(planner)
     mcp_app = mcp.http_app(path="/")
 
@@ -152,6 +168,7 @@ def create_app() -> FastAPI:
             "docs": "/docs",
             "redoc": "/redoc",
             "openapi": "/openapi.json",
+            "plan": "/v1/plan",
             "mcp": "/mcp",
             "metrics": "/metrics",
             "x402_ask_enabled": settings.x402_ask_enabled,
@@ -166,6 +183,20 @@ def create_app() -> FastAPI:
     )
     def health() -> HealthResponse:
         return HealthResponse(status="ok", service="omnimission-api")
+
+    @app.post(
+        "/v1/plan",
+        tags=["planning"],
+        summary="Plan a mission (REST)",
+        operation_id="plan_mission_rest",
+    )
+    def plan_mission_rest(body: PlanMissionInput) -> dict:
+        """Same planner as MCP `plan_mission`: ranked skills, policy, verification, optional checkpoints."""
+        return planner.plan(
+            body.mission,
+            mission_id=body.mission_id,
+            include_ranking_details=body.include_ranking_details,
+        )
 
     app.mount("/mcp", mcp_app)
     app.mount("/metrics", make_asgi_app())

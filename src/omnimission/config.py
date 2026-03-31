@@ -43,9 +43,22 @@ class Settings(BaseSettings):
     chroma_host: str = "localhost"
     chroma_port: int = 8000
     collection_name: str = "skills_mcp"
+    mission_state_collection: str = "omnimission_missions"
+    mission_state_enabled: bool = Field(
+        default=True,
+        description="When true, optional mission_id checkpoints are stored in Chroma.",
+    )
     embed_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     top_k: int = 12
     fetch_n: int = 24
+    policy_block_keywords: str = Field(
+        default="",
+        description="Comma-separated substrings (case-insensitive); matching skills are excluded.",
+    )
+    policy_min_safety_score: float = Field(
+        default=0.0,
+        description="If >0, drop skills whose safety_score is below this threshold.",
+    )
     crawler_interval_minutes: int = 15
     crawler_seed_urls: str = Field(
         default="https://example.com",

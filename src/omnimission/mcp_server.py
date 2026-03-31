@@ -15,16 +15,25 @@ def build_mcp(planner: MissionPlanner) -> FastMCP:
         "OmniMission",
         instructions=(
             "Plans missions by ranking indexed skills and MCPs for a short natural-language goal. "
-            "Returns deduplicated picks, quality/safety scores, x402 USD preview, and install hints."
+            "Returns deduplicated picks, quality/safety scores, policy summary, verification against "
+            "the index, optional x402 USD preview, install hints, and optional mission_id checkpoints."
         ),
     )
 
     @mcp.tool
-    def plan_mission(mission: str) -> dict:
-        """Rank the best 8–12 skills/MCPs for this mission (semantic match + metadata scores)."""
+    def plan_mission(
+        mission: str,
+        mission_id: str | None = None,
+        include_ranking_details: bool = True,
+    ) -> dict:
+        """Rank skills/MCPs for this mission (semantic match + metadata scores + policy + verify)."""
         t0 = time.perf_counter()
         try:
-            payload = PlanMissionInput(mission=mission)
+            payload = PlanMissionInput(
+                mission=mission,
+                mission_id=mission_id,
+                include_ranking_details=include_ranking_details,
+            )
         except ValidationError as e:
             record_plan_mission(
                 duration_seconds=time.perf_counter() - t0,
@@ -32,7 +41,11 @@ def build_mcp(planner: MissionPlanner) -> FastMCP:
             )
             return {"error": "validation_error", "detail": e.errors()}
         try:
-            out = planner.plan(payload.mission)
+            out = planner.plan(
+                payload.mission,
+                mission_id=payload.mission_id,
+                include_ranking_details=payload.include_ranking_details,
+            )
             record_plan_mission(
                 duration_seconds=time.perf_counter() - t0,
                 status="success",

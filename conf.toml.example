@@ -4,7 +4,11 @@
 chroma_host = "localhost"
 chroma_port = 8000
 collection_name = "skills_mcp"
+mission_state_collection = "omnimission_missions"
+mission_state_enabled = true
 embed_model = "sentence-transformers/all-MiniLM-L6-v2"
+policy_block_keywords = ""
+policy_min_safety_score = 0.0
 top_k = 12
 fetch_n = 24
 crawler_interval_minutes = 15

@@ -58,3 +58,25 @@ class ChromaStore:
         dists = (res.get("distances") or [[]])[0]
         docs = (res.get("documents") or [[]])[0]
         return ids, metas, dists, docs
+
+    def get_by_ids(self, ids: list[str]) -> set[str]:
+        """IDs that still exist in this collection (for post-retrieval verification)."""
+        if not ids:
+            return set()
+        col = self.collection()
+        res = col.get(ids=ids, include=[])
+        return set(res.get("ids") or [])
+
+    def get_document_map(self, ids: list[str]) -> dict[str, str]:
+        """Map id -> document text for small auxiliary collections (e.g. mission checkpoints)."""
+        if not ids:
+            return {}
+        col = self.collection()
+        res = col.get(ids=ids, include=["documents"])
+        out: dict[str, str] = {}
+        id_list = res.get("ids") or []
+        docs = res.get("documents") or []
+        for i, sid in enumerate(id_list):
+            if i < len(docs) and docs[i]:
+                out[sid] = docs[i]
+        return out
