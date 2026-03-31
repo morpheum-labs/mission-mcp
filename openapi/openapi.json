@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "OmniMission API",
-    "description": "\n**OmniMission** exposes a REST surface for health checks and mounts a **FastMCP** server for agents.\n\n- **OpenAPI** (this spec): `/openapi.json`, interactive docs: `/docs`, ReDoc: `/redoc`\n- **MCP (HTTP)**: mounted at `/mcp` — use an MCP client with streamable HTTP/SSE against that path. Primary tool: `plan_mission` (natural-language mission → ranked skills, scores, x402 preview, install hints).\n\nThe MCP protocol is defined by the [Model Context Protocol](https://modelcontextprotocol.io/); this document describes the FastAPI routes only (the MCP sub-app is documented below as an extension path).\n",
+    "description": "\n**OmniMission** exposes a REST surface for health checks and mounts a **FastMCP** server for agents.\n\n- **OpenAPI** (this spec): `/openapi.json`, interactive docs: `/docs`, ReDoc: `/redoc`\n- **MCP (HTTP)**: mounted at `/mcp` — use an MCP client with streamable HTTP/SSE against that path. Primary tool: `plan_mission` (natural-language mission → ranked skills, scores, x402 preview, install hints).\n- **Prometheus**: `GET /metrics` — scrape for HTTP, `plan_mission`, and Chroma query counters (and crawler when that process runs).\n- **x402 ask (optional)**: set `OMNIMISSION_X402_ASK_ENABLED=true` to require [x402](https://www.x402.org/) payment (HTTP 402) on `/mcp` before MCP access; configure facilitator URL, network, `pay_to`, and price via env.\n\nThe MCP protocol is defined by the [Model Context Protocol](https://modelcontextprotocol.io/); this document describes the FastAPI routes only (the MCP sub-app is documented below as an extension path).\n",
     "version": "0.1.0"
   },
   "paths": {
