@@ -7,7 +7,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from omnimission.config import Settings
-from omnimission.planner.service import MissionPlanner, _rank_and_dedupe
+from omnimission.planner.service import (
+    MissionPlanner,
+    _rank_and_dedupe,
+    _sort_skills_relevance_then_cost,
+)
 
 
 @pytest.fixture
@@ -78,6 +82,15 @@ def test_mission_planner_chroma_error(mock_embed: MagicMock, planner_settings: S
 
     with pytest.raises(RuntimeError, match="Chroma down"):
         planner.plan("test mission")
+
+
+def test_sort_skills_free_before_paid_when_combined_score_tied() -> None:
+    skills = [
+        {"title": "paid", "combined_score": 0.5, "x402_price_usd": 0.10},
+        {"title": "free", "combined_score": 0.5, "x402_price_usd": 0.0},
+    ]
+    out = _sort_skills_relevance_then_cost(skills)
+    assert [s["title"] for s in out] == ["free", "paid"]
 
 
 def test_rank_and_dedupe_one_skill_per_publisher() -> None:

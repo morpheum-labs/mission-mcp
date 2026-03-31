@@ -83,6 +83,17 @@ def _rank_and_dedupe(
     return ranked[:top_k]
 
 
+def _sort_skills_relevance_then_cost(skills: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Primary: highest combined_score first; secondary: lower x402_price_usd first (free before paid)."""
+    return sorted(
+        skills,
+        key=lambda s: (
+            -_coerce_float(s.get("combined_score"), 0.0),
+            _coerce_float(s.get("x402_price_usd"), 0.0),
+        ),
+    )
+
+
 class MissionPlanner:
     def __init__(self, settings: Settings, store: ChromaStore) -> None:
         self._settings = settings
@@ -135,11 +146,12 @@ class MissionPlanner:
 
     def plan(self, mission: str) -> dict[str, Any]:
         out: PlannerState = self._graph.invoke({"mission": mission})
+        skills = _sort_skills_relevance_then_cost(out.get("ranked_skills") or [])
         return {
             "mission": mission,
             "intent_summary": out.get("intent_summary", ""),
             "subtasks": out.get("subtasks") or [],
-            "skills": out.get("ranked_skills") or [],
+            "skills": skills,
             "x402_preview": out.get("x402_preview") or {},
             "install_commands": out.get("install_commands") or [],
             "x402_ask": {
